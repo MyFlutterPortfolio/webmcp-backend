@@ -14,11 +14,14 @@ import (
 )
 
 type Server struct {
-	httpServer   *http.Server
-	ready        atomic.Bool
-	deps         Dependencies
-	guestIssueMu sync.Mutex
-	guestIssues  map[string][]time.Time
+	httpServer       *http.Server
+	ready            atomic.Bool
+	deps             Dependencies
+	guestIssueMu     sync.Mutex
+	guestIssues      map[string][]time.Time
+	agentChatEnabled bool
+	agentChatMu      sync.Mutex
+	agentChatIssues  map[string][]time.Time
 }
 
 type ReadinessCheck func(context.Context) error
@@ -40,7 +43,7 @@ func NewServerWithDependencies(cfg config.Config, logger *slog.Logger, deps Depe
 		logger = slog.Default()
 	}
 	mux := http.NewServeMux()
-	server := &Server{deps: deps, guestIssues: make(map[string][]time.Time)}
+	server := &Server{deps: deps, guestIssues: make(map[string][]time.Time), agentChatEnabled: cfg.AgentChatEnabled, agentChatIssues: make(map[string][]time.Time)}
 
 	mux.HandleFunc("GET /healthz", server.health)
 	mux.HandleFunc("GET /readyz", server.readyCheck)
@@ -49,6 +52,7 @@ func NewServerWithDependencies(cfg config.Config, logger *slog.Logger, deps Depe
 	protected := func(next http.Handler) http.Handler {
 		return authenticated(deps.Authenticator, deps.Authorizer, requireAuthorizer, next)
 	}
+	mux.Handle("POST /api/v1/agent/chat", protected(http.HandlerFunc(server.agentChat)))
 	mux.Handle("GET /api/v1/businesses/{businessId}/snapshot", protected(http.HandlerFunc(server.businessSnapshot)))
 	mux.Handle("POST /api/v1/analysis", protected(http.HandlerFunc(server.analyzeBusiness)))
 	mux.Handle("POST /api/v1/goals/{goalId}/constraints", protected(http.HandlerFunc(server.updateConstraint)))
@@ -139,6 +143,25 @@ func (s *Server) allowGuestIssue(ip string) bool {
 	}
 	issues = append(issues, now)
 	s.guestIssues[ip] = issues
+	return true
+}
+
+func (s *Server) allowAgentChat(ip string) bool {
+	now := time.Now()
+	cutoff := now.Add(-time.Minute)
+	s.agentChatMu.Lock()
+	defer s.agentChatMu.Unlock()
+	issues := s.agentChatIssues[ip][:0]
+	for _, at := range s.agentChatIssues[ip] {
+		if at.After(cutoff) {
+			issues = append(issues, at)
+		}
+	}
+	if len(issues) >= 30 {
+		s.agentChatIssues[ip] = issues
+		return false
+	}
+	s.agentChatIssues[ip] = append(issues, now)
 	return true
 }
 

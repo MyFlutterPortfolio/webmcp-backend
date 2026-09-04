@@ -13,29 +13,34 @@ import (
 // Config contains only process-level configuration. Secrets are intentionally
 // not loaded into a client-facing package or returned by any API endpoint.
 type Config struct {
-	Environment         string
-	HTTPAddr            string
-	DatabaseURL         string
-	DBMinConns          int32
-	DBMaxConns          int32
-	ShutdownTimeout     time.Duration
-	RequestTimeout      time.Duration
-	MaxBodyBytes        int64
-	AllowedOrigins      []string
-	ReadHeaderTimeout   time.Duration
-	WriteTimeout        time.Duration
-	IdleTimeout         time.Duration
-	JWTIssuer           string
-	JWTAudience         string
-	JWKSURL             string
-	JWTClockSkew        time.Duration
-	GuestDemoEnabled    bool
-	GuestDemoSecret     string
-	GuestUserID         string
-	GuestOrganizationID string
-	GuestBusinessID     string
-	GuestGoalID         string
-	GuestTokenTTL       time.Duration
+	Environment           string
+	HTTPAddr              string
+	DatabaseURL           string
+	DBMinConns            int32
+	DBMaxConns            int32
+	ShutdownTimeout       time.Duration
+	RequestTimeout        time.Duration
+	MaxBodyBytes          int64
+	AllowedOrigins        []string
+	ReadHeaderTimeout     time.Duration
+	WriteTimeout          time.Duration
+	IdleTimeout           time.Duration
+	JWTIssuer             string
+	JWTAudience           string
+	JWKSURL               string
+	JWTClockSkew          time.Duration
+	GuestDemoEnabled      bool
+	GuestDemoSecret       string
+	GuestUserID           string
+	GuestOrganizationID   string
+	GuestBusinessID       string
+	GuestGoalID           string
+	GuestTokenTTL         time.Duration
+	AgentChatEnabled      bool
+	GeminiAPIKey          string
+	GeminiModel           string
+	GeminiBaseURL         string
+	GeminiMaxOutputTokens int
 }
 
 func Load() (Config, error) {
@@ -44,29 +49,34 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 	c := Config{
-		Environment:         getString("WEBMCP_ENV", "development"),
-		HTTPAddr:            address,
-		DatabaseURL:         strings.TrimSpace(os.Getenv("WEBMCP_DATABASE_URL")),
-		DBMinConns:          int32(getInt64("WEBMCP_DB_MIN_CONNS", 2)),
-		DBMaxConns:          int32(getInt64("WEBMCP_DB_MAX_CONNS", 10)),
-		ShutdownTimeout:     getDuration("WEBMCP_SHUTDOWN_TIMEOUT", 10*time.Second),
-		RequestTimeout:      getDuration("WEBMCP_REQUEST_TIMEOUT", 15*time.Second),
-		MaxBodyBytes:        getInt64("WEBMCP_MAX_BODY_BYTES", 1<<20),
-		AllowedOrigins:      splitCSV(os.Getenv("WEBMCP_ALLOWED_ORIGINS")),
-		ReadHeaderTimeout:   5 * time.Second,
-		WriteTimeout:        30 * time.Second,
-		IdleTimeout:         60 * time.Second,
-		JWTIssuer:           strings.TrimSpace(os.Getenv("WEBMCP_JWT_ISSUER")),
-		JWTAudience:         strings.TrimSpace(os.Getenv("WEBMCP_JWT_AUDIENCE")),
-		JWKSURL:             strings.TrimSpace(os.Getenv("WEBMCP_JWKS_URL")),
-		JWTClockSkew:        getDuration("WEBMCP_JWT_CLOCK_SKEW", 30*time.Second),
-		GuestDemoEnabled:    getBool("WEBMCP_GUEST_DEMO_ENABLED", false),
-		GuestDemoSecret:     strings.TrimSpace(os.Getenv("WEBMCP_GUEST_DEMO_SECRET")),
-		GuestUserID:         strings.TrimSpace(os.Getenv("WEBMCP_GUEST_DEMO_USER_ID")),
-		GuestOrganizationID: strings.TrimSpace(os.Getenv("WEBMCP_GUEST_DEMO_ORGANIZATION_ID")),
-		GuestBusinessID:     strings.TrimSpace(os.Getenv("WEBMCP_GUEST_DEMO_BUSINESS_ID")),
-		GuestGoalID:         strings.TrimSpace(os.Getenv("WEBMCP_GUEST_DEMO_GOAL_ID")),
-		GuestTokenTTL:       getDuration("WEBMCP_GUEST_DEMO_TOKEN_TTL", 15*time.Minute),
+		Environment:           getString("WEBMCP_ENV", "development"),
+		HTTPAddr:              address,
+		DatabaseURL:           strings.TrimSpace(os.Getenv("WEBMCP_DATABASE_URL")),
+		DBMinConns:            int32(getInt64("WEBMCP_DB_MIN_CONNS", 2)),
+		DBMaxConns:            int32(getInt64("WEBMCP_DB_MAX_CONNS", 10)),
+		ShutdownTimeout:       getDuration("WEBMCP_SHUTDOWN_TIMEOUT", 10*time.Second),
+		RequestTimeout:        getDuration("WEBMCP_REQUEST_TIMEOUT", 15*time.Second),
+		MaxBodyBytes:          getInt64("WEBMCP_MAX_BODY_BYTES", 1<<20),
+		AllowedOrigins:        splitCSV(os.Getenv("WEBMCP_ALLOWED_ORIGINS")),
+		ReadHeaderTimeout:     5 * time.Second,
+		WriteTimeout:          30 * time.Second,
+		IdleTimeout:           60 * time.Second,
+		JWTIssuer:             strings.TrimSpace(os.Getenv("WEBMCP_JWT_ISSUER")),
+		JWTAudience:           strings.TrimSpace(os.Getenv("WEBMCP_JWT_AUDIENCE")),
+		JWKSURL:               strings.TrimSpace(os.Getenv("WEBMCP_JWKS_URL")),
+		JWTClockSkew:          getDuration("WEBMCP_JWT_CLOCK_SKEW", 30*time.Second),
+		GuestDemoEnabled:      getBool("WEBMCP_GUEST_DEMO_ENABLED", false),
+		GuestDemoSecret:       strings.TrimSpace(os.Getenv("WEBMCP_GUEST_DEMO_SECRET")),
+		GuestUserID:           strings.TrimSpace(os.Getenv("WEBMCP_GUEST_DEMO_USER_ID")),
+		GuestOrganizationID:   strings.TrimSpace(os.Getenv("WEBMCP_GUEST_DEMO_ORGANIZATION_ID")),
+		GuestBusinessID:       strings.TrimSpace(os.Getenv("WEBMCP_GUEST_DEMO_BUSINESS_ID")),
+		GuestGoalID:           strings.TrimSpace(os.Getenv("WEBMCP_GUEST_DEMO_GOAL_ID")),
+		GuestTokenTTL:         getDuration("WEBMCP_GUEST_DEMO_TOKEN_TTL", 15*time.Minute),
+		AgentChatEnabled:      getBool("WEBMCP_AGENT_CHAT_ENABLED", true),
+		GeminiAPIKey:          strings.TrimSpace(os.Getenv("WEBMCP_GEMINI_API_KEY")),
+		GeminiModel:           getString("WEBMCP_GEMINI_MODEL", "gemini-2.5-flash"),
+		GeminiBaseURL:         getString("WEBMCP_GEMINI_BASE_URL", "https://generativelanguage.googleapis.com/v1beta"),
+		GeminiMaxOutputTokens: int(getInt64("WEBMCP_GEMINI_MAX_OUTPUT_TOKENS", 700)),
 	}
 
 	if err := c.Validate(); err != nil {
@@ -123,6 +133,9 @@ func (c Config) Validate() error {
 	if err := validateGuestDemo(c); err != nil {
 		return err
 	}
+	if err := validateAgentChat(c); err != nil {
+		return err
+	}
 	for _, origin := range c.AllowedOrigins {
 		if err := validateOrigin(origin); err != nil {
 			return fmt.Errorf("WEBMCP_ALLOWED_ORIGINS contains invalid origin %q: %w", origin, err)
@@ -132,6 +145,31 @@ func (c Config) Validate() error {
 		if err := validateProductionDatabaseURL(c.DatabaseURL, c.Environment == "production"); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func validateAgentChat(c Config) error {
+	if !c.AgentChatEnabled {
+		return nil
+	}
+	if c.GeminiMaxOutputTokens < 128 || c.GeminiMaxOutputTokens > 4096 {
+		return fmt.Errorf("WEBMCP_GEMINI_MAX_OUTPUT_TOKENS must be between 128 and 4096")
+	}
+	if len(c.GeminiModel) == 0 || len(c.GeminiModel) > 100 || strings.ContainsAny(c.GeminiModel, " /\\") {
+		return fmt.Errorf("WEBMCP_GEMINI_MODEL is invalid")
+	}
+	parsed, err := url.Parse(c.GeminiBaseURL)
+	if err != nil || (parsed.Scheme != "https" && c.Environment != "production" && c.Environment != "staging") || parsed.Host == "" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
+		return fmt.Errorf("WEBMCP_GEMINI_BASE_URL must be an HTTPS URL")
+	}
+	if c.Environment == "production" || c.Environment == "staging" {
+		if parsed.Scheme != "https" || parsed.Host != "generativelanguage.googleapis.com" {
+			return fmt.Errorf("WEBMCP_GEMINI_BASE_URL must use the official Gemini API host in staging and production")
+		}
+	}
+	if c.GeminiAPIKey != "" && (len(c.GeminiAPIKey) < 8 || len(c.GeminiAPIKey) > 512) {
+		return fmt.Errorf("WEBMCP_GEMINI_API_KEY length is invalid")
 	}
 	return nil
 }

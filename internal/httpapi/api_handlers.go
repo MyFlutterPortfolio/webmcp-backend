@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"strings"
 
+	"webmcp-backend/internal/application/agentworkflow"
 	"webmcp-backend/internal/application/analysisworkflow"
 	"webmcp-backend/internal/application/approvalworkflow"
 	"webmcp-backend/internal/application/planningworkflow"
@@ -41,6 +42,7 @@ type Dependencies struct {
 	Analysis       analysisworkflow.API
 	Constraints    planningworkflow.API
 	GuestIssuer    GuestSessionIssuer
+	AgentChat      agentworkflow.API
 }
 
 // PrincipalAuthorizer maps a verified token subject to the server-side

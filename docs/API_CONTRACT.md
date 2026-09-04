@@ -19,6 +19,7 @@
 | Resource | Purpose | Mutation class |
 |---|---|---|
 | `/api/v1/businesses/{business_id}/snapshot` | current business state and metrics | read |
+| `/api/v1/agent/chat` | grounded advisory conversation plus optional typed capability suggestion | advisory/read |
 | `/api/v1/analysis` | verified snapshot + goal evidence, signals and trade-offs | read/derived |
 | `/api/v1/goals` | human planning intent | human write |
 | `/api/v1/goals/{goal_id}/constraints` | explicit human constraints | human write |
@@ -32,3 +33,9 @@
 Exact request and response schemas are maintained in [openapi.yaml](openapi.yaml) and must remain consistent with WebMCP tool schemas.
 
 The implemented snapshot and commit handlers are documented in [M6_API_INTEGRATION.md](M6_API_INTEGRATION.md). The API remains fail-closed when no real authenticator is configured.
+
+## Agent chat contract
+
+`POST /api/v1/agent/chat` reads the authorized snapshot and goal, projects a bounded non-PII context to the configured Gemini adapter, and returns a concise response. If the next step is unambiguous, the response may include one `tool_suggestion` using a semantic WebMCP name and typed arguments. The frontend presents that suggestion as an explicit human action; the chat route never executes tools, approves proposals or commits business state.
+
+When `WEBMCP_GEMINI_API_KEY` is absent or the provider is unavailable, the same contract is served by the deterministic safe guide. This keeps the judge path functional while preserving the provider boundary. Conversation history is client-held and bounded; raw prompts and provider payloads are not logged.

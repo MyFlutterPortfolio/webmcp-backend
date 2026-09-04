@@ -25,6 +25,35 @@ paths:
           description: Process and required dependencies are ready.
         '503':
           $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/agent/chat:
+    post:
+      operationId: chatWithAgent
+      description: Advisory agent turn grounded in an authorized business snapshot. Chat may return one typed capability suggestion, but never authorizes or commits a consequential action.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentChatRequest'
+      responses:
+        '200':
+          description: Grounded agent response and optional explicit capability suggestion.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentChatResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          description: Per-instance chat rate limit reached.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
   /api/v1/businesses/{businessId}/snapshot:
     get:
       operationId: getBusinessSnapshot
@@ -250,6 +279,89 @@ components:
             code: { type: string }
             message: { type: string }
         request_id: { type: string }
+    AgentChatRequest:
+      type: object
+      required: [business_id, goal_id, message]
+      additionalProperties: false
+      properties:
+        business_id: { type: string, minLength: 1, maxLength: 200 }
+        goal_id: { type: string, minLength: 1, maxLength: 200 }
+        conversation_id: { type: string, maxLength: 200 }
+        message: { type: string, minLength: 1, maxLength: 4000 }
+        current_stage: { type: string, enum: [orient, investigate, explore, collaborate, review, approved] }
+        available_tools:
+          type: array
+          maxItems: 24
+          items: { type: string, maxLength: 100 }
+        recent_messages:
+          type: array
+          maxItems: 8
+          items:
+            type: object
+            required: [role, content]
+            additionalProperties: false
+            properties:
+              role: { type: string, enum: [user, assistant] }
+              content: { type: string, minLength: 1, maxLength: 2000 }
+    AgentChatResponse:
+      type: object
+      required: [conversation_id, message, provider, grounded_context, warnings, request_id]
+      properties:
+        conversation_id: { type: string }
+        message: { type: string }
+        provider: { type: string, enum: [gemini, deterministic_fallback] }
+        grounded_context: { $ref: '#/components/schemas/AgentChatGroundedContext' }
+        tool_suggestion: { $ref: '#/components/schemas/AgentChatSuggestion' }
+        warnings: { type: array, items: { type: string } }
+        request_id: { type: string }
+    AgentChatSuggestion:
+      type: object
+      required: [name, arguments, reason, risk]
+      additionalProperties: false
+      properties:
+        name: { type: string }
+        arguments: { type: object, additionalProperties: true }
+        reason: { type: string, maxLength: 500 }
+        risk: { type: string, enum: [read_only, non_canonical, human_gate] }
+    AgentChatGroundedContext:
+      type: object
+      required: [business_id, business_version, product_count, active_product_count, customer_count, repeat_customer_count, order_count, revenue_cents, margin_cents, metrics, goal_id, goal_version, objective, time_horizon_days, preference, guardrails]
+      properties:
+        business_id: { type: string }
+        business_version: { type: integer, minimum: 1 }
+        product_count: { type: integer, minimum: 0 }
+        active_product_count: { type: integer, minimum: 0 }
+        customer_count: { type: integer, minimum: 0 }
+        repeat_customer_count: { type: integer, minimum: 0 }
+        order_count: { type: integer, minimum: 0 }
+        revenue_cents: { type: integer, minimum: 0 }
+        margin_cents: { type: integer }
+        metrics:
+          type: array
+          maxItems: 12
+          items:
+            type: object
+            required: [key, value, unit, period]
+            properties:
+              key: { type: string }
+              value: { type: number }
+              unit: { type: string }
+              period: { type: string }
+        goal_id: { type: string }
+        goal_version: { type: integer, minimum: 1 }
+        objective: { type: string }
+        time_horizon_days: { type: integer, minimum: 1 }
+        preference: { type: string }
+        guardrails:
+          type: array
+          maxItems: 12
+          items:
+            type: object
+            required: [key, value, hard]
+            properties:
+              key: { type: string }
+              value: { type: string }
+              hard: { type: boolean }
     BusinessSnapshot:
       type: object
       required: [status, business_id, version, products, customers, orders, metrics, request_id]

@@ -8,6 +8,7 @@ import (
 	"syscall"
 	"time"
 
+	"webmcp-backend/internal/application/agentworkflow"
 	"webmcp-backend/internal/application/analysisworkflow"
 	"webmcp-backend/internal/application/approvalworkflow"
 	"webmcp-backend/internal/application/planningworkflow"
@@ -84,6 +85,11 @@ func main() {
 		dependencies.Proposals = proposalworkflow.NewService(scenarioRepository, proposalRepository)
 		approvalRepository := postgres.ApprovalRepository{Pool: pool}
 		dependencies.Approvals = approvalworkflow.NewService(approvalRepository, nil)
+		var primaryAgent agentworkflow.Provider
+		if cfg.GeminiAPIKey != "" {
+			primaryAgent = agentworkflow.NewGeminiProvider(cfg.GeminiAPIKey, cfg.GeminiModel, cfg.GeminiBaseURL, 9*time.Second, cfg.GeminiMaxOutputTokens)
+		}
+		dependencies.AgentChat = agentworkflow.NewService(dependencies.SnapshotReader, scenarioRepository, primaryAgent, agentworkflow.DeterministicProvider{})
 	}
 	if databasePoolClose != nil {
 		defer databasePoolClose()
@@ -93,7 +99,8 @@ func main() {
 	server.SetReady(dependencies.Authenticator != nil && dependencies.Readiness != nil &&
 		dependencies.SnapshotReader != nil && dependencies.Committer != nil &&
 		dependencies.Scenarios != nil && dependencies.Proposals != nil && dependencies.Approvals != nil &&
-		dependencies.Analysis != nil && dependencies.Constraints != nil)
+		dependencies.Analysis != nil && dependencies.Constraints != nil &&
+		(!cfg.AgentChatEnabled || dependencies.AgentChat != nil))
 
 	serverErr := make(chan error, 1)
 	go func() {
