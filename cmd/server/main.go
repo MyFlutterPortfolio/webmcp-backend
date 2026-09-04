@@ -86,10 +86,19 @@ func main() {
 		approvalRepository := postgres.ApprovalRepository{Pool: pool}
 		dependencies.Approvals = approvalworkflow.NewService(approvalRepository, nil)
 		var primaryAgent agentworkflow.Provider
-		if cfg.GeminiAPIKey != "" {
-			primaryAgent = agentworkflow.NewGeminiProvider(cfg.GeminiAPIKey, cfg.GeminiModel, cfg.GeminiBaseURL, 9*time.Second, cfg.GeminiMaxOutputTokens)
+		fallbackAgents := []agentworkflow.Provider{agentworkflow.DeterministicProvider{}}
+		if cfg.GroqAPIKey != "" {
+			primaryAgent = agentworkflow.NewGroqProvider(cfg.GroqAPIKey, cfg.GroqModel, cfg.GroqBaseURL, 9*time.Second, cfg.GroqMaxOutputTokens)
+			fallbackAgents = make([]agentworkflow.Provider, 0, 3)
+			if cfg.GroqFallbackAPIKey != "" {
+				fallbackAgents = append(fallbackAgents, agentworkflow.NewGroqProvider(cfg.GroqFallbackAPIKey, cfg.GroqFallbackModel, cfg.GroqBaseURL, 9*time.Second, cfg.GroqMaxOutputTokens))
+			}
+			if cfg.GroqFallbackAPIKey2 != "" {
+				fallbackAgents = append(fallbackAgents, agentworkflow.NewGroqProvider(cfg.GroqFallbackAPIKey2, cfg.GroqFallbackModel2, cfg.GroqBaseURL, 9*time.Second, cfg.GroqMaxOutputTokens))
+			}
+			fallbackAgents = append(fallbackAgents, agentworkflow.DeterministicProvider{})
 		}
-		dependencies.AgentChat = agentworkflow.NewService(dependencies.SnapshotReader, scenarioRepository, primaryAgent, agentworkflow.DeterministicProvider{})
+		dependencies.AgentChat = agentworkflow.NewService(dependencies.SnapshotReader, scenarioRepository, primaryAgent, fallbackAgents...)
 	}
 	if databasePoolClose != nil {
 		defer databasePoolClose()

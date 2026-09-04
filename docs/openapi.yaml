@@ -309,7 +309,7 @@ components:
       properties:
         conversation_id: { type: string }
         message: { type: string }
-        provider: { type: string, enum: [gemini, deterministic_fallback] }
+        provider: { type: string, enum: [groq, deterministic_fallback] }
         grounded_context: { $ref: '#/components/schemas/AgentChatGroundedContext' }
         tool_suggestion: { $ref: '#/components/schemas/AgentChatSuggestion' }
         warnings: { type: array, items: { type: string } }

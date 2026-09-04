@@ -12,6 +12,8 @@ import (
 // commit, and never invents business numbers.
 type DeterministicProvider struct{}
 
+func (DeterministicProvider) Label() string { return "deterministic_fallback" }
+
 func (DeterministicProvider) Generate(_ context.Context, prompt Prompt) (ProviderResponse, error) {
 	message := "I can work with the verified business context, analyze evidence, model bounded alternatives, and prepare a reviewable proposal. Ask me to inspect the business pulse or investigate a specific growth question."
 	var suggestion *ToolSuggestion

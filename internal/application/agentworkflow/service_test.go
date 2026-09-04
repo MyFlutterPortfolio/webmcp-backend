@@ -31,6 +31,18 @@ func (p testProvider) Generate(context.Context, Prompt) (ProviderResponse, error
 	return p.response, p.err
 }
 
+type labeledTestProvider struct {
+	label    string
+	response ProviderResponse
+	err      error
+}
+
+func (p labeledTestProvider) Generate(context.Context, Prompt) (ProviderResponse, error) {
+	return p.response, p.err
+}
+
+func (p labeledTestProvider) Label() string { return p.label }
+
 func testChatContext() (business.Snapshot, planning.Goal) {
 	return business.Snapshot{
 			BusinessID: "business-1", Version: 7,
@@ -45,9 +57,9 @@ func testChatContext() (business.Snapshot, planning.Goal) {
 		}
 }
 
-func testService(primary, fallback Provider) Service {
+func testService(primary Provider, fallbacks ...Provider) Service {
 	snapshot, goal := testChatContext()
-	return NewService(testSnapshotReader{snapshot: snapshot}, testGoalReader{goal: goal}, primary, fallback)
+	return NewService(testSnapshotReader{snapshot: snapshot}, testGoalReader{goal: goal}, primary, fallbacks...)
 }
 
 func testInput(message, stage string) Input {
@@ -95,5 +107,23 @@ func TestChatRejectsOversizedOrInvalidContext(t *testing.T) {
 	_, err := testService(nil, DeterministicProvider{}).Chat(context.Background(), input)
 	if !errors.Is(err, ErrInvalidInput) {
 		t.Fatalf("expected invalid input, got %v", err)
+	}
+}
+
+func TestChatUsesGroqFallbackChainBeforeDeterministicGuide(t *testing.T) {
+	primary := labeledTestProvider{label: "groq", err: errors.New("primary unavailable")}
+	fallbackOne := labeledTestProvider{label: "groq", err: errors.New("fallback one unavailable")}
+	fallbackTwo := labeledTestProvider{label: "groq", response: ProviderResponse{Message: "Fallback answer"}}
+	service := testService(primary, fallbackOne, fallbackTwo, DeterministicProvider{})
+
+	result, err := service.Chat(context.Background(), testInput("inspect the workspace", "orient"))
+	if err != nil {
+		t.Fatalf("chat failed: %v", err)
+	}
+	if result.Provider != "groq" || result.Message != "Fallback answer" {
+		t.Fatalf("fallback chain did not select the second Groq slot: %+v", result)
+	}
+	if len(result.Warnings) < 2 {
+		t.Fatalf("fallback routing warning is missing: %+v", result.Warnings)
 	}
 }

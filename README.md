@@ -4,7 +4,7 @@ Go asosidagi alohida production backend loyihasi.
 
 ## Hozirgi holat
 
-Backend foundation, tenant-scoped PostgreSQL workflow, deterministic scenario/proposal/approval flow, hardened REST boundaries, provider-neutral OIDC JWT/JWKS validation, bounded guest judging and WebMCP-facing contracts are implemented. The current judge MVP deliberately keeps business calculations deterministic; an autonomous LLM router/provider is a documented extension boundary, not a runtime dependency. Live PostgreSQL/RLS concurrency verification and deployment smoke tests remain environment-level release checks.
+Backend foundation, tenant-scoped PostgreSQL workflow, deterministic scenario/proposal/approval flow, hardened REST boundaries, provider-neutral OIDC JWT/JWKS validation, bounded guest judging, Groq-backed advisory chat and WebMCP-facing contracts are implemented. Business calculations remain deterministic; Groq only produces bounded, validated recommendations and typed capability suggestions. Live PostgreSQL/RLS concurrency verification and deployment smoke tests remain environment-level release checks.
 
 ## Vazifa
 

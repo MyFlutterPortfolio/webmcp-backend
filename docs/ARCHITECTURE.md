@@ -41,7 +41,7 @@ Agent yoki keyingi planner’dan kelgan hech qanday text to‘g‘ridan-to‘g�
 
 ### Future AI Router boundary
 
-Current judge MVP ushbu komponentga runtime dependency qilmaydi: scenario va business calculations deterministic domain engine’da bajariladi. Kelajakda Gemini primary va fallback provider adapterlari qo‘shilsa, ular typed output validation, timeout, retry budget, circuit breaker, cost metadata va redacted logging boundary’si orqali ulanadi; provider output canonical business state bo‘la olmaydi.
+Current runtime’da Groq primary va ikki independently keyed fallback adapteri mavjud, lekin scenario va business calculations deterministic domain engine’da bajariladi. Groq adapterlari typed output validation, timeout, bounded fallback chain, key isolation, cost metadata va redacted logging boundary’si orqali ulanadi; provider output canonical business state bo‘la olmaydi.
 
 ### Scenario Engine
 
@@ -153,7 +153,7 @@ Independent build/test/deploy pipeline. Environment’lar development, staging v
 
 - Product domain, user roles va tenancy modeli.
 - Concrete authentication provider and token/session lifecycle integration.
-- Gemini model/version, fallback provider va provider selection policy.
+- Groq model/version, fallback chain va provider selection policy.
 - WebMCP tool execution localmi yoki backend-mediatedmi.
 - Queue/worker kerakligi va long-running execution modeli.
 - Approval actorlari, risk matrix va emergency/revoke qoidalari.

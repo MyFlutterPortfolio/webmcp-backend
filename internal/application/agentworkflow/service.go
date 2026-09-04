@@ -30,6 +30,11 @@ type Provider interface {
 	Generate(context.Context, Prompt) (ProviderResponse, error)
 }
 
+type labeledProvider interface {
+	Provider
+	Label() string
+}
+
 type Input struct {
 	OrganizationID core.ID
 	ActorID        core.ID
@@ -124,11 +129,14 @@ type Service struct {
 	snapshots ports.BusinessSnapshotReader
 	goals     ports.GoalReader
 	primary   Provider
-	fallback  Provider
+	fallbacks []Provider
 }
 
-func NewService(snapshots ports.BusinessSnapshotReader, goals ports.GoalReader, primary, fallback Provider) Service {
-	return Service{snapshots: snapshots, goals: goals, primary: primary, fallback: fallback}
+// NewService creates a provider chain. The primary is attempted first, then
+// each fallback in order. A deterministic provider should be the final
+// fallback so the judge path remains useful without an external AI secret.
+func NewService(snapshots ports.BusinessSnapshotReader, goals ports.GoalReader, primary Provider, fallbacks ...Provider) Service {
+	return Service{snapshots: snapshots, goals: goals, primary: primary, fallbacks: fallbacks}
 }
 
 func (s Service) Chat(ctx context.Context, input Input) (Response, error) {
@@ -164,25 +172,29 @@ func (s Service) Chat(ctx context.Context, input Input) (Response, error) {
 
 	providerName := "deterministic_fallback"
 	var generated ProviderResponse
+	providers := make([]Provider, 0, 1+len(s.fallbacks))
 	if s.primary != nil {
-		generated, err = s.primary.Generate(ctx, prompt)
-		if err == nil {
-			providerName = "gemini"
-		}
+		providers = append(providers, s.primary)
 	}
-	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-		return Response{}, err
-	}
-	if err != nil || s.primary == nil {
-		if s.fallback == nil {
-			return Response{}, ErrContextUnavailable
+	providers = append(providers, s.fallbacks...)
+	usedProviderIndex := -1
+	for index, provider := range providers {
+		if provider == nil {
+			continue
 		}
-		generated, err = s.fallback.Generate(ctx, prompt)
-		if err != nil {
-			return Response{}, fmt.Errorf("%w: agent response could not be produced", ErrContextUnavailable)
+		candidate, providerErr := provider.Generate(ctx, prompt)
+		if errors.Is(providerErr, context.Canceled) || errors.Is(providerErr, context.DeadlineExceeded) {
+			return Response{}, providerErr
 		}
+		if providerErr != nil || strings.TrimSpace(candidate.Message) == "" {
+			continue
+		}
+		generated = candidate
+		providerName = providerLabel(provider)
+		usedProviderIndex = index
+		break
 	}
-	if strings.TrimSpace(generated.Message) == "" {
+	if usedProviderIndex < 0 {
 		return Response{}, fmt.Errorf("%w: agent response was empty", ErrContextUnavailable)
 	}
 
@@ -194,7 +206,9 @@ func (s Service) Chat(ctx context.Context, input Input) (Response, error) {
 		Warnings:       []string{"The agent is advisory. No business state changed in this chat."},
 	}
 	if providerName == "deterministic_fallback" && s.primary != nil {
-		result.Warnings = append(result.Warnings, "Gemini was unavailable for this turn; the safe deterministic guide answered instead.")
+		result.Warnings = append(result.Warnings, "Groq was unavailable for this turn; the safe deterministic guide answered instead.")
+	} else if usedProviderIndex > 0 && providerName == "groq" {
+		result.Warnings = append(result.Warnings, "The primary Groq model was unavailable; a configured fallback model answered instead.")
 	}
 	if generated.ToolSuggestion != nil {
 		suggestion, suggestionErr := validateSuggestion(*generated.ToolSuggestion, input, allowed)
@@ -205,6 +219,13 @@ func (s Service) Chat(ctx context.Context, input Input) (Response, error) {
 		}
 	}
 	return result, nil
+}
+
+func providerLabel(provider Provider) string {
+	if labeled, ok := provider.(labeledProvider); ok && strings.TrimSpace(labeled.Label()) != "" {
+		return strings.TrimSpace(labeled.Label())
+	}
+	return "agent_provider"
 }
 
 func validateInput(input Input) error {

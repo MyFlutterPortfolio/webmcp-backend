@@ -8,7 +8,7 @@
 1. **Foundation** — repository conventions, Go module, configuration, HTTP server lifecycle, health/readiness, structured errors, correlation IDs and CI checks.
 2. **Canonical domain** — business snapshot, planning goal, constraints, scenarios, proposals, approvals, commit operation and explicit state machines.
 3. **Persistence** — PostgreSQL migrations, repositories, transaction boundaries, version checks, idempotency and append-only audit events.
-4. **AI and orchestration** — provider interface, Gemini adapter, fallback policy, structured output validation, bounded agent runs and safe tool planning.
+4. **AI and orchestration** — provider interface, Groq adapter, three-model fallback policy, structured output validation, bounded agent runs and safe tool planning.
 5. **WebMCP contract** — semantic tool schemas, registry, capability lifecycle, structured tool results and backend authorization revalidation.
 6. **API integration** — authenticated snapshot/commit boundaries, explicit DTOs, idempotent commit payloads and contract tests.
 7. **Frontend workspace** — UI/UX document-driven screens, server state, activity trace, scenario comparison, constraint editing, approval and commit UX.

@@ -31,7 +31,21 @@ WEBMCP_DB_MIN_CONNS=1
 WEBMCP_DB_MAX_CONNS=5
 WEBMCP_REQUEST_TIMEOUT=15s
 WEBMCP_MAX_BODY_BYTES=1048576
+WEBMCP_AGENT_CHAT_ENABLED=true
+WEBMCP_GROQ_API_KEY=<Railway secret>
+WEBMCP_GROQ_FALLBACK_API_KEY=<Railway secret>
+WEBMCP_GROQ_FALLBACK_API_KEY_2=<Railway secret>
+WEBMCP_GROQ_MODEL=openai/gpt-oss-120b
+WEBMCP_GROQ_FALLBACK_MODEL=openai/gpt-oss-120b
+WEBMCP_GROQ_FALLBACK_MODEL_2=openai/gpt-oss-120b
+WEBMCP_GROQ_BASE_URL=https://api.groq.com/openai/v1
+WEBMCP_GROQ_MAX_OUTPUT_TOKENS=700
 ```
+
+The three Groq secrets are isolated routing slots. The primary slot is tried
+first, then fallback slot 1 and fallback slot 2; the deterministic guide is
+the final safe fallback. Never place a Groq key in the frontend environment,
+Vite variables, WebMCP tool code or committed files.
 
 `WEBMCP_JWT_ISSUER`, `WEBMCP_JWT_AUDIENCE` and `WEBMCP_JWKS_URL` are a single
 authentication boundary. The service stays unready until all three are

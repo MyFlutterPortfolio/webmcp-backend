@@ -13,34 +13,38 @@ import (
 // Config contains only process-level configuration. Secrets are intentionally
 // not loaded into a client-facing package or returned by any API endpoint.
 type Config struct {
-	Environment           string
-	HTTPAddr              string
-	DatabaseURL           string
-	DBMinConns            int32
-	DBMaxConns            int32
-	ShutdownTimeout       time.Duration
-	RequestTimeout        time.Duration
-	MaxBodyBytes          int64
-	AllowedOrigins        []string
-	ReadHeaderTimeout     time.Duration
-	WriteTimeout          time.Duration
-	IdleTimeout           time.Duration
-	JWTIssuer             string
-	JWTAudience           string
-	JWKSURL               string
-	JWTClockSkew          time.Duration
-	GuestDemoEnabled      bool
-	GuestDemoSecret       string
-	GuestUserID           string
-	GuestOrganizationID   string
-	GuestBusinessID       string
-	GuestGoalID           string
-	GuestTokenTTL         time.Duration
-	AgentChatEnabled      bool
-	GeminiAPIKey          string
-	GeminiModel           string
-	GeminiBaseURL         string
-	GeminiMaxOutputTokens int
+	Environment         string
+	HTTPAddr            string
+	DatabaseURL         string
+	DBMinConns          int32
+	DBMaxConns          int32
+	ShutdownTimeout     time.Duration
+	RequestTimeout      time.Duration
+	MaxBodyBytes        int64
+	AllowedOrigins      []string
+	ReadHeaderTimeout   time.Duration
+	WriteTimeout        time.Duration
+	IdleTimeout         time.Duration
+	JWTIssuer           string
+	JWTAudience         string
+	JWKSURL             string
+	JWTClockSkew        time.Duration
+	GuestDemoEnabled    bool
+	GuestDemoSecret     string
+	GuestUserID         string
+	GuestOrganizationID string
+	GuestBusinessID     string
+	GuestGoalID         string
+	GuestTokenTTL       time.Duration
+	AgentChatEnabled    bool
+	GroqAPIKey          string
+	GroqFallbackAPIKey  string
+	GroqFallbackAPIKey2 string
+	GroqModel           string
+	GroqFallbackModel   string
+	GroqFallbackModel2  string
+	GroqBaseURL         string
+	GroqMaxOutputTokens int
 }
 
 func Load() (Config, error) {
@@ -49,34 +53,38 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 	c := Config{
-		Environment:           getString("WEBMCP_ENV", "development"),
-		HTTPAddr:              address,
-		DatabaseURL:           strings.TrimSpace(os.Getenv("WEBMCP_DATABASE_URL")),
-		DBMinConns:            int32(getInt64("WEBMCP_DB_MIN_CONNS", 2)),
-		DBMaxConns:            int32(getInt64("WEBMCP_DB_MAX_CONNS", 10)),
-		ShutdownTimeout:       getDuration("WEBMCP_SHUTDOWN_TIMEOUT", 10*time.Second),
-		RequestTimeout:        getDuration("WEBMCP_REQUEST_TIMEOUT", 15*time.Second),
-		MaxBodyBytes:          getInt64("WEBMCP_MAX_BODY_BYTES", 1<<20),
-		AllowedOrigins:        splitCSV(os.Getenv("WEBMCP_ALLOWED_ORIGINS")),
-		ReadHeaderTimeout:     5 * time.Second,
-		WriteTimeout:          30 * time.Second,
-		IdleTimeout:           60 * time.Second,
-		JWTIssuer:             strings.TrimSpace(os.Getenv("WEBMCP_JWT_ISSUER")),
-		JWTAudience:           strings.TrimSpace(os.Getenv("WEBMCP_JWT_AUDIENCE")),
-		JWKSURL:               strings.TrimSpace(os.Getenv("WEBMCP_JWKS_URL")),
-		JWTClockSkew:          getDuration("WEBMCP_JWT_CLOCK_SKEW", 30*time.Second),
-		GuestDemoEnabled:      getBool("WEBMCP_GUEST_DEMO_ENABLED", false),
-		GuestDemoSecret:       strings.TrimSpace(os.Getenv("WEBMCP_GUEST_DEMO_SECRET")),
-		GuestUserID:           strings.TrimSpace(os.Getenv("WEBMCP_GUEST_DEMO_USER_ID")),
-		GuestOrganizationID:   strings.TrimSpace(os.Getenv("WEBMCP_GUEST_DEMO_ORGANIZATION_ID")),
-		GuestBusinessID:       strings.TrimSpace(os.Getenv("WEBMCP_GUEST_DEMO_BUSINESS_ID")),
-		GuestGoalID:           strings.TrimSpace(os.Getenv("WEBMCP_GUEST_DEMO_GOAL_ID")),
-		GuestTokenTTL:         getDuration("WEBMCP_GUEST_DEMO_TOKEN_TTL", 15*time.Minute),
-		AgentChatEnabled:      getBool("WEBMCP_AGENT_CHAT_ENABLED", true),
-		GeminiAPIKey:          strings.TrimSpace(os.Getenv("WEBMCP_GEMINI_API_KEY")),
-		GeminiModel:           getString("WEBMCP_GEMINI_MODEL", "gemini-2.5-flash"),
-		GeminiBaseURL:         getString("WEBMCP_GEMINI_BASE_URL", "https://generativelanguage.googleapis.com/v1beta"),
-		GeminiMaxOutputTokens: int(getInt64("WEBMCP_GEMINI_MAX_OUTPUT_TOKENS", 700)),
+		Environment:         getString("WEBMCP_ENV", "development"),
+		HTTPAddr:            address,
+		DatabaseURL:         strings.TrimSpace(os.Getenv("WEBMCP_DATABASE_URL")),
+		DBMinConns:          int32(getInt64("WEBMCP_DB_MIN_CONNS", 2)),
+		DBMaxConns:          int32(getInt64("WEBMCP_DB_MAX_CONNS", 10)),
+		ShutdownTimeout:     getDuration("WEBMCP_SHUTDOWN_TIMEOUT", 10*time.Second),
+		RequestTimeout:      getDuration("WEBMCP_REQUEST_TIMEOUT", 15*time.Second),
+		MaxBodyBytes:        getInt64("WEBMCP_MAX_BODY_BYTES", 1<<20),
+		AllowedOrigins:      splitCSV(os.Getenv("WEBMCP_ALLOWED_ORIGINS")),
+		ReadHeaderTimeout:   5 * time.Second,
+		WriteTimeout:        30 * time.Second,
+		IdleTimeout:         60 * time.Second,
+		JWTIssuer:           strings.TrimSpace(os.Getenv("WEBMCP_JWT_ISSUER")),
+		JWTAudience:         strings.TrimSpace(os.Getenv("WEBMCP_JWT_AUDIENCE")),
+		JWKSURL:             strings.TrimSpace(os.Getenv("WEBMCP_JWKS_URL")),
+		JWTClockSkew:        getDuration("WEBMCP_JWT_CLOCK_SKEW", 30*time.Second),
+		GuestDemoEnabled:    getBool("WEBMCP_GUEST_DEMO_ENABLED", false),
+		GuestDemoSecret:     strings.TrimSpace(os.Getenv("WEBMCP_GUEST_DEMO_SECRET")),
+		GuestUserID:         strings.TrimSpace(os.Getenv("WEBMCP_GUEST_DEMO_USER_ID")),
+		GuestOrganizationID: strings.TrimSpace(os.Getenv("WEBMCP_GUEST_DEMO_ORGANIZATION_ID")),
+		GuestBusinessID:     strings.TrimSpace(os.Getenv("WEBMCP_GUEST_DEMO_BUSINESS_ID")),
+		GuestGoalID:         strings.TrimSpace(os.Getenv("WEBMCP_GUEST_DEMO_GOAL_ID")),
+		GuestTokenTTL:       getDuration("WEBMCP_GUEST_DEMO_TOKEN_TTL", 15*time.Minute),
+		AgentChatEnabled:    getBool("WEBMCP_AGENT_CHAT_ENABLED", true),
+		GroqAPIKey:          strings.TrimSpace(os.Getenv("WEBMCP_GROQ_API_KEY")),
+		GroqFallbackAPIKey:  strings.TrimSpace(os.Getenv("WEBMCP_GROQ_FALLBACK_API_KEY")),
+		GroqFallbackAPIKey2: strings.TrimSpace(os.Getenv("WEBMCP_GROQ_FALLBACK_API_KEY_2")),
+		GroqModel:           getString("WEBMCP_GROQ_MODEL", "openai/gpt-oss-120b"),
+		GroqFallbackModel:   getString("WEBMCP_GROQ_FALLBACK_MODEL", "openai/gpt-oss-120b"),
+		GroqFallbackModel2:  getString("WEBMCP_GROQ_FALLBACK_MODEL_2", "openai/gpt-oss-120b"),
+		GroqBaseURL:         getString("WEBMCP_GROQ_BASE_URL", "https://api.groq.com/openai/v1"),
+		GroqMaxOutputTokens: int(getInt64("WEBMCP_GROQ_MAX_OUTPUT_TOKENS", 700)),
 	}
 
 	if err := c.Validate(); err != nil {
@@ -153,23 +161,46 @@ func validateAgentChat(c Config) error {
 	if !c.AgentChatEnabled {
 		return nil
 	}
-	if c.GeminiMaxOutputTokens < 128 || c.GeminiMaxOutputTokens > 4096 {
-		return fmt.Errorf("WEBMCP_GEMINI_MAX_OUTPUT_TOKENS must be between 128 and 4096")
+	if c.GroqMaxOutputTokens < 128 || c.GroqMaxOutputTokens > 4096 {
+		return fmt.Errorf("WEBMCP_GROQ_MAX_OUTPUT_TOKENS must be between 128 and 4096")
 	}
-	if len(c.GeminiModel) == 0 || len(c.GeminiModel) > 100 || strings.ContainsAny(c.GeminiModel, " /\\") {
-		return fmt.Errorf("WEBMCP_GEMINI_MODEL is invalid")
+	models := []struct {
+		name  string
+		value string
+	}{
+		{"WEBMCP_GROQ_MODEL", c.GroqModel},
+		{"WEBMCP_GROQ_FALLBACK_MODEL", c.GroqFallbackModel},
+		{"WEBMCP_GROQ_FALLBACK_MODEL_2", c.GroqFallbackModel2},
 	}
-	parsed, err := url.Parse(c.GeminiBaseURL)
-	if err != nil || (parsed.Scheme != "https" && c.Environment != "production" && c.Environment != "staging") || parsed.Host == "" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
-		return fmt.Errorf("WEBMCP_GEMINI_BASE_URL must be an HTTPS URL")
-	}
-	if c.Environment == "production" || c.Environment == "staging" {
-		if parsed.Scheme != "https" || parsed.Host != "generativelanguage.googleapis.com" {
-			return fmt.Errorf("WEBMCP_GEMINI_BASE_URL must use the official Gemini API host in staging and production")
+	for _, model := range models {
+		if len(model.value) == 0 || len(model.value) > 100 || strings.ContainsAny(model.value, " \\") {
+			return fmt.Errorf("%s is invalid", model.name)
 		}
 	}
-	if c.GeminiAPIKey != "" && (len(c.GeminiAPIKey) < 8 || len(c.GeminiAPIKey) > 512) {
-		return fmt.Errorf("WEBMCP_GEMINI_API_KEY length is invalid")
+	parsed, err := url.Parse(c.GroqBaseURL)
+	if err != nil || (parsed.Scheme != "https" && c.Environment != "production" && c.Environment != "staging") || parsed.Host == "" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
+		return fmt.Errorf("WEBMCP_GROQ_BASE_URL must be an HTTPS URL")
+	}
+	if c.Environment == "production" || c.Environment == "staging" {
+		if parsed.Scheme != "https" || parsed.Host != "api.groq.com" {
+			return fmt.Errorf("WEBMCP_GROQ_BASE_URL must use the official Groq API host in staging and production")
+		}
+	}
+	keys := []struct {
+		name  string
+		value string
+	}{
+		{"WEBMCP_GROQ_API_KEY", c.GroqAPIKey},
+		{"WEBMCP_GROQ_FALLBACK_API_KEY", c.GroqFallbackAPIKey},
+		{"WEBMCP_GROQ_FALLBACK_API_KEY_2", c.GroqFallbackAPIKey2},
+	}
+	for _, key := range keys {
+		if key.value != "" && (len(key.value) < 8 || len(key.value) > 512) {
+			return fmt.Errorf("%s length is invalid", key.name)
+		}
+	}
+	if c.GroqAPIKey == "" && (c.GroqFallbackAPIKey != "" || c.GroqFallbackAPIKey2 != "") {
+		return fmt.Errorf("WEBMCP_GROQ_API_KEY is required when a Groq fallback key is configured")
 	}
 	return nil
 }

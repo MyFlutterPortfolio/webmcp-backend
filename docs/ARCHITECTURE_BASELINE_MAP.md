@@ -36,7 +36,7 @@ Go application services / agent orchestrator
         ↓
 Deterministic domain and scenario logic
         ├── PostgreSQL authoritative state
-        └── AI Gateway (Gemini primary + fallback)
+        └── AI Gateway (Groq primary + two keyed model fallbacks + deterministic safety fallback)
         ↓
 Structured result → human review → approval → idempotent commit
 ```
@@ -62,7 +62,7 @@ The following remain open until the next documents or explicit approval:
 - exact tool schemas, tool availability lifecycle and execution ownership;
 - API/OpenAPI contracts and frontend state implementation;
 - database schema and migration strategy;
-- AI model versions, fallback provider and retry policy;
+- AI model versions, fallback routing and retry policy;
 - hosting, domain, secrets, observability and demo data;
 - whether long-running operations need asynchronous processing.
 
