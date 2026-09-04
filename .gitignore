@@ -1,0 +1,17 @@
+# Build output
+/bin/
+/dist/
+*.exe
+*.test
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+
+# OS / editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+.neon

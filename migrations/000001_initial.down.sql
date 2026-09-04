@@ -1,0 +1,17 @@
+DROP TABLE IF EXISTS audit_events;
+DROP TABLE IF EXISTS committed_decisions;
+DROP TABLE IF EXISTS commit_operations;
+DROP TABLE IF EXISTS approvals;
+DROP TABLE IF EXISTS proposal_versions;
+DROP TABLE IF EXISTS proposals;
+DROP TABLE IF EXISTS scenarios;
+DROP TABLE IF EXISTS goal_constraints;
+DROP TABLE IF EXISTS goals;
+DROP TABLE IF EXISTS metrics;
+DROP TABLE IF EXISTS orders;
+DROP TABLE IF EXISTS customers;
+DROP TABLE IF EXISTS products;
+DROP TABLE IF EXISTS businesses;
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS organizations;
+DROP FUNCTION IF EXISTS set_updated_at();

@@ -1,0 +1,537 @@
+openapi: 3.1.0
+info:
+  title: WebMCP Business Co-Creation API
+  version: 1.0.0
+  description: Versioned backend contract for the human-agent business workspace.
+servers:
+  - url: https://api.example.invalid
+    description: Placeholder; replaced at deployment time.
+security:
+  - bearerAuth: []
+paths:
+  /healthz:
+    get:
+      security: []
+      operationId: health
+      responses:
+        '200':
+          description: Process is alive.
+  /readyz:
+    get:
+      security: []
+      operationId: readiness
+      responses:
+        '200':
+          description: Process and required dependencies are ready.
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/businesses/{businessId}/snapshot:
+    get:
+      operationId: getBusinessSnapshot
+      parameters:
+        - $ref: '#/components/parameters/BusinessId'
+      responses:
+        '200':
+          description: Authoritative current business snapshot.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusinessSnapshot'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/goals:
+    post:
+      operationId: createGoal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGoalRequest'
+      responses:
+        '201':
+          description: Goal created.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /api/v1/scenarios:
+    post:
+      operationId: createScenario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateScenarioRequest'
+      responses:
+        '201':
+          description: Draft scenario created from the current business version.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Scenario' }
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/v1/scenarios/{scenarioId}/simulation:
+    post:
+      operationId: runScenario
+      parameters:
+        - $ref: '#/components/parameters/ScenarioId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SimulationRequest'
+      responses:
+        '200':
+          description: Deterministic simulation result pinned to a business version.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Scenario' }
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/v1/scenarios/compare:
+    post:
+      operationId: compareScenarios
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompareScenariosRequest'
+      responses:
+        '200':
+          description: Structured comparison with a safe recommendation when possible.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ScenarioComparison' }
+        '422':
+          $ref: '#/components/responses/BadRequest'
+  /api/v1/proposals:
+    post:
+      operationId: draftProposal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateProposalRequest' }
+      responses:
+        '201':
+          description: Reviewable draft proposal created from a simulated scenario.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Proposal' }
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/v1/proposals/{proposalId}/revisions:
+    post:
+      operationId: reviseProposal
+      parameters:
+        - $ref: '#/components/parameters/ProposalId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReviseProposalRequest' }
+      responses:
+        '200':
+          description: New draft version with the previous version superseded.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Proposal' }
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/v1/proposals/{proposalId}/review:
+    post:
+      operationId: requestHumanReview
+      parameters:
+        - $ref: '#/components/parameters/ProposalId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReviewProposalRequest' }
+      responses:
+        '200':
+          description: Proposal submitted for explicit human review.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Proposal' }
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/v1/proposals/{proposalId}/approval:
+    post:
+      operationId: decideProposalApproval
+      parameters:
+        - $ref: '#/components/parameters/ProposalId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ApprovalDecisionRequest' }
+      responses:
+        '200':
+          description: Human approval or rejection bound to the exact proposal version.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApprovalDecision' }
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/v1/proposals/{proposalId}/commit:
+    post:
+      operationId: commitApprovedProposal
+      parameters:
+        - $ref: '#/components/parameters/ProposalId'
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommitProposalRequest'
+      responses:
+        '200':
+          description: Commit succeeded or was safely replayed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommitOutcome'
+        '409':
+          description: Stale, duplicate-conflict, in-progress or invalid state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    BusinessId:
+      name: businessId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 200 }
+    ProposalId:
+      name: proposalId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 200 }
+    ScenarioId:
+      name: scenarioId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 200 }
+    RequestId:
+      name: X-Request-ID
+      in: header
+      required: false
+      schema: { type: string, maxLength: 128 }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 8, maxLength: 200 }
+  schemas:
+    ErrorResponse:
+      type: object
+      required: [error, request_id]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string }
+            message: { type: string }
+        request_id: { type: string }
+    BusinessSnapshot:
+      type: object
+      required: [status, business_id, version, products, customers, orders, metrics, request_id]
+      properties:
+        status: { type: string, const: ok }
+        business_id: { type: string }
+        version: { type: integer, minimum: 1 }
+        products:
+          type: array
+          items: { $ref: '#/components/schemas/Product' }
+        customers:
+          type: array
+          items: { $ref: '#/components/schemas/Customer' }
+        orders:
+          type: array
+          items: { $ref: '#/components/schemas/Order' }
+        metrics:
+          type: array
+          items: { $ref: '#/components/schemas/Metric' }
+        request_id: { type: string }
+    Product:
+      type: object
+      required: [id, sku, name, price_cents, cost_cents, inventory_units, active, version]
+      properties:
+        id: { type: string }
+        sku: { type: string }
+        name: { type: string }
+        price_cents: { type: integer, minimum: 0 }
+        cost_cents: { type: integer, minimum: 0 }
+        inventory_units: { type: integer, minimum: 0 }
+        active: { type: boolean }
+        version: { type: integer, minimum: 1 }
+    Customer:
+      type: object
+      required: [id, name, segment, active, version]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        segment: { type: string }
+        active: { type: boolean }
+        version: { type: integer, minimum: 1 }
+    Order:
+      type: object
+      required: [id, customer_id, product_id, quantity, revenue_cents, cost_cents, occurred_at_unix, version]
+      properties:
+        id: { type: string }
+        customer_id: { type: string }
+        product_id: { type: string }
+        quantity: { type: integer, minimum: 1 }
+        revenue_cents: { type: integer, minimum: 0 }
+        cost_cents: { type: integer, minimum: 0 }
+        occurred_at_unix: { type: integer }
+        version: { type: integer, minimum: 1 }
+    Metric:
+      type: object
+      required: [key, value, unit, period, source, version]
+      properties:
+        key: { type: string }
+        value: { type: number }
+        unit: { type: string }
+        period: { type: string }
+        source: { type: string }
+        version: { type: integer, minimum: 1 }
+    CreateGoalRequest:
+      type: object
+      required: [business_id, objective, time_horizon_days, preference]
+      additionalProperties: false
+      properties:
+        business_id: { type: string, minLength: 1, maxLength: 200 }
+        objective: { type: string, minLength: 1, maxLength: 2000 }
+        time_horizon_days: { type: integer, minimum: 1, maximum: 3650 }
+        preference: { type: string, enum: [conservative, balanced, aggressive] }
+    CommitProposalRequest:
+      type: object
+      required: [business_id, proposal_version_id]
+      additionalProperties: false
+      properties:
+        business_id: { type: string, minLength: 1, maxLength: 200 }
+        proposal_version_id: { type: string, minLength: 1, maxLength: 200 }
+    CreateScenarioRequest:
+      type: object
+      required: [business_id, goal_id, name, objective, proposed_actions]
+      additionalProperties: false
+      properties:
+        business_id: { type: string, minLength: 1, maxLength: 200 }
+        goal_id: { type: string, minLength: 1, maxLength: 200 }
+        name: { type: string, minLength: 1, maxLength: 120 }
+        objective: { type: string, minLength: 1, maxLength: 1000 }
+        proposed_actions:
+          type: array
+          minItems: 1
+          maxItems: 32
+          items: { $ref: '#/components/schemas/ScenarioAction' }
+    ScenarioAction:
+      type: object
+      required: [type, value, unit]
+      additionalProperties: false
+      properties:
+        type: { type: string, enum: [price_adjustment, inventory_replenishment, marketing_budget] }
+        target_id: { type: string, minLength: 1, maxLength: 200 }
+        value: { type: number }
+        unit: { type: string, enum: [percent, units, cents] }
+    SimulationRequest:
+      type: object
+      required: [business_id]
+      additionalProperties: false
+      properties:
+        business_id: { type: string, minLength: 1, maxLength: 200 }
+    CompareScenariosRequest:
+      type: object
+      required: [business_id, scenario_ids]
+      additionalProperties: false
+      properties:
+        business_id: { type: string, minLength: 1, maxLength: 200 }
+        scenario_ids:
+          type: array
+          minItems: 2
+          maxItems: 8
+          uniqueItems: true
+          items: { type: string, minLength: 1, maxLength: 200 }
+    CreateProposalRequest:
+      type: object
+      required: [business_id, goal_id, scenario_id, summary]
+      additionalProperties: false
+      properties:
+        business_id: { type: string, minLength: 1, maxLength: 200 }
+        goal_id: { type: string, minLength: 1, maxLength: 200 }
+        scenario_id: { type: string, minLength: 1, maxLength: 200 }
+        summary: { type: string, minLength: 1, maxLength: 2000 }
+    ReviseProposalRequest:
+      type: object
+      required: [feedback]
+      additionalProperties: false
+      properties:
+        feedback: { type: string, minLength: 1, maxLength: 2000 }
+    ReviewProposalRequest:
+      type: object
+      required: [business_id]
+      additionalProperties: false
+      properties:
+        business_id: { type: string, minLength: 1, maxLength: 200 }
+    ApprovalDecisionRequest:
+      type: object
+      required: [business_id, proposal_version_id, decision, reason]
+      additionalProperties: false
+      properties:
+        business_id: { type: string, minLength: 1, maxLength: 200 }
+        proposal_version_id: { type: string, minLength: 1, maxLength: 200 }
+        decision: { type: string, enum: [approved, rejected] }
+        reason: { type: string, minLength: 1, maxLength: 2000 }
+    Scenario:
+      type: object
+      required: [status, id, goal_id, business_id, base_business_version, name, objective, proposed_actions, assumptions, result, risks, version, request_id]
+      properties:
+        status: { type: string, enum: [draft, simulated, compared, archived] }
+        id: { type: string }
+        goal_id: { type: string }
+        business_id: { type: string }
+        base_business_version: { type: integer, minimum: 1 }
+        name: { type: string }
+        objective: { type: string }
+        proposed_actions:
+          type: array
+          items: { $ref: '#/components/schemas/ScenarioAction' }
+        assumptions:
+          type: array
+          items:
+            type: object
+            required: [key, value]
+            properties:
+              key: { type: string }
+              value: { type: string }
+        result: { $ref: '#/components/schemas/ScenarioResult' }
+        risks:
+          type: array
+          items: { $ref: '#/components/schemas/ScenarioRisk' }
+        version: { type: integer, minimum: 1 }
+        request_id: { type: string }
+    ScenarioResult:
+      type: object
+      required: [baseline_metrics, projected_metrics, metric_deltas, warnings, calculated]
+      properties:
+        baseline_metrics: { type: object, additionalProperties: { type: number } }
+        projected_metrics: { type: object, additionalProperties: { type: number } }
+        metric_deltas: { type: object, additionalProperties: { type: number } }
+        warnings: { type: array, items: { type: string } }
+        calculated: { type: boolean }
+    ScenarioRisk:
+      type: object
+      required: [key, description, severity]
+      properties:
+        key: { type: string }
+        description: { type: string }
+        severity: { type: string, enum: [low, medium, high] }
+    ScenarioComparison:
+      type: object
+      required: [items, recommendation_available, recommendation_basis, warnings, request_id]
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            required: [id, name, status, projected_metrics, metric_deltas, risks, warnings]
+            properties:
+              id: { type: string }
+              name: { type: string }
+              status: { type: string, enum: [simulated, compared] }
+              projected_metrics: { type: object, additionalProperties: { type: number } }
+              metric_deltas: { type: object, additionalProperties: { type: number } }
+              risks: { type: array, items: { $ref: '#/components/schemas/ScenarioRisk' } }
+              warnings: { type: array, items: { type: string } }
+        recommended_scenario_id: { type: string }
+        recommendation_available: { type: boolean }
+        recommendation_basis: { type: string }
+        warnings: { type: array, items: { type: string } }
+        request_id: { type: string }
+    Proposal:
+      type: object
+      required: [id, business_id, goal_id, version, current, request_id]
+      properties:
+        id: { type: string }
+        business_id: { type: string }
+        goal_id: { type: string }
+        version: { type: integer, minimum: 1 }
+        current:
+          type: object
+          required: [id, proposal_id, number, scenario_id, base_business_version, summary, changes, status]
+          properties:
+            id: { type: string }
+            proposal_id: { type: string }
+            number: { type: integer, minimum: 1 }
+            scenario_id: { type: string }
+            base_business_version: { type: integer, minimum: 1 }
+            summary: { type: string }
+            changes:
+              type: array
+              items:
+                type: object
+                required: [entity_type, entity_id, field, from, to]
+                properties:
+                  entity_type: { type: string }
+                  entity_id: { type: string }
+                  field: { type: string }
+                  from: { type: string }
+                  to: { type: string }
+            status: { type: string, enum: [draft, in_review, approved, rejected, committed, superseded] }
+        request_id: { type: string }
+    CommitOutcome:
+      type: object
+      required: [operation_id, decision_id, status, committed_business_version, replayed, request_id]
+      properties:
+        operation_id: { type: string }
+        decision_id: { type: string }
+        status: { type: string, const: succeeded }
+        committed_business_version: { type: integer, minimum: 1 }
+        replayed: { type: boolean }
+        request_id: { type: string }
+    ApprovalDecision:
+      type: object
+      required: [id, proposal_id, proposal_version_id, business_id, status, reason, decided_by, request_id]
+      properties:
+        id: { type: string }
+        proposal_id: { type: string }
+        proposal_version_id: { type: string }
+        business_id: { type: string }
+        status: { type: string, enum: [approved, rejected] }
+        reason: { type: string }
+        decided_by: { type: string }
+        request_id: { type: string }
+  responses:
+    BadRequest:
+      description: Invalid input.
+      content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } }
+    Forbidden:
+      description: Authorization denied.
+      content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } }
+    NotFound:
+      description: Resource not found.
+      content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } }
+    ServiceUnavailable:
+      description: Required dependency is unavailable.
+      content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } }
+    Conflict:
+      description: Resource version or workflow state conflict.
+      content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } }
